@@ -15,7 +15,7 @@ El sistema implementa tres funcionalidades principales:
 ## Funciones adicionales ✨
 Además de las funcionalidades principales, el sistema incorpora varias características adicionales que mejoran su rendimiento y usabilidad:
 
-- Se ha integrado la versión de chat de Ollama 3.2, lo que permite mantener una conversación continua con el chatbot, en lugar de responder únicamente a una consultas.
+- Se ha integrado la versión de chat de Ollama 3.2, lo que permite mantener una conversación continua con el chatbot, en lugar de responder a consultas por separado.
 - El sistema aplica un proceso de normalización y lematización a cada consulta para identificar los términos relevantes, facilitando la búsqueda precisa de documentos relacionados en la base de datos.
 - BOEtiquin sugiere temas relacionados al responder, proporcionando un contexto adicional al usuario.
 - Ofrece la opción de generar resúmenes automáticos de cada respuesta.
