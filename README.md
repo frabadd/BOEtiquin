@@ -1,6 +1,6 @@
 # Bienvenido a BOEtiquin! 👋⚖️
 
-Boetiquin es un Chatbot que responde preguntas de una base de datos documental del Boletín Oficial del Estado (BOE), proporcionando respuestas fundamentadas y relevantes.
+Boetiquin es un chatbot que responde preguntas de una base de datos documental del Boletín Oficial del Estado (BOE), proporcionando respuestas fundamentadas y relevantes.
 
 # 1. Funcionalidades
 
