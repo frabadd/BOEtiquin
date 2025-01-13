@@ -19,7 +19,6 @@ from deep_translator import GoogleTranslator
 
 from bertopic import BERTopic
 
-
 @Language.factory("language_detector")
 def create_language_detector(nlp, name):
     return LanguageDetector(language_detection_function=None)
@@ -30,7 +29,8 @@ MAX_TOKENS_RESPONSE = 100
 # Detectar el idioma de la pregunta
 mult_nlp = spacy.load('xx_sent_ud_sm')
 mult_nlp.add_pipe('language_detector', last=True)
-detected_language = 'es'
+detected_language = "es"
+similar_topics = []
 
 role_message = """Eres un experto en derecho español, y tu tarea consiste en responder preguntas relacionadas con el Boletín Oficial del Estado (BOE) de España. Además, formas parte de un sistema RAG (Retrieval-Augmented Generation), por lo que debes responder únicamente cuando se te proporcione información suficiente sobre un tema.
 1. Las respuestas deben derivarse exclusivamente del contexto proporcionado.
@@ -155,10 +155,10 @@ def query_similar_paragraphs(complex_query, index, metadata, paragraphs, k=5, mo
          list: Una lista de tuplas, cada una conteniendo el nombre del documento, el párrafo y la distancia de similitud.
      """
 
-    model = SentenceTransformer(model_name)
+    model = SentenceTransformer(model_name, device = 'cpu')
     queries = extract_relevant_terms(complex_query)
     complex_query = " ".join(queries)
-    # print("Rephrased query:", complex_query)
+    print("Rephrased query:", complex_query)
     
     query_embedding = model.encode([complex_query], convert_to_numpy=True)
     distances, indices = index.search(query_embedding, k)
@@ -171,7 +171,8 @@ def query_similar_paragraphs(complex_query, index, metadata, paragraphs, k=5, mo
 
 # Integración del chat con la extracción de contexto de la base de datos
 def rag_chat(index, metadata, paragraphs, query, prev_response, topic_model, model="llama3.2", url="http://kumo01:11434/api/chat"):
-
+    global detected_language
+    global similar_topics
     DISTANCE_THRESHOLD = 1.2
 
     topic_related = ""
@@ -181,6 +182,10 @@ def rag_chat(index, metadata, paragraphs, query, prev_response, topic_model, mod
 
     # Traducir la pregunta a español porque la base de datos está en español
     detected_language = mult_doc._.language['language']
+
+    if detected_language =='UNKNOWN':
+        detected_language = 'es'
+
     if detected_language != 'es':
         query = GoogleTranslator(source=detected_language, target='es').translate(query)
 
@@ -203,7 +208,6 @@ def rag_chat(index, metadata, paragraphs, query, prev_response, topic_model, mod
         # Proponer sugerencias
         similar_topics = topic_model.find_topics(prompt, top_n=3)
         topic_info = topic_model.get_topic_info()
-
         topic_related = f"\nTambién puedes consultar los siguientes temas relacionados:\n"
         if len(similar_topics[0]) == 0:
             topic_related = ""
@@ -254,9 +258,16 @@ if __name__ == "__main__":
     paragraphs =  [item['paragraph'] for item in metadata]
     metadata =  [(item['doc'], item['id']) for item in metadata]
 
+    print("Hola soy BOEtiquin, tu asistente legal que responde preguntas de una base de datos documental del Boletín Oficial del Estado (BOE). ¿En qué puedo ayudarte hoy?")
     prev_response = {"content": ""}
+    topic_selected = ""
     while True:
-        query = input("\nPregunta: ")
+        if topic_selected != "":
+            query = topic_selected
+            query = GoogleTranslator(source='es', target=detected_language).translate(query)
+        else:
+            query = input("\nPregunta: ")
+
         if query.lower() in ["salir", "exit", "quit", "q"]:
             salir = "Saliendo del chat..."
             if detected_language != "es":
@@ -279,5 +290,25 @@ if __name__ == "__main__":
             if resumen.lower() == "si" or resumen.lower() == "yes" or resumen == "1":
                 summary = generate_summary(response['message']['content'])
                 print(f"\n{summary}")
+        
+        pregunta = "Quieres saber más sobre alguno de los temas relacionados? (Sí/no)"
+        if detected_language != "es":
+            pregunta = GoogleTranslator(source='es', target=detected_language).translate(pregunta)
 
+        topic_question = input(f"\n{pregunta} (1/0):\n>> ")
+        if topic_question.lower() == "si" or topic_question.lower() == "yes" or topic_question == "1":
+            topic_string = "Sobre qué topic quieres más información?"
+            if detected_language != "es":
+                topic_string = GoogleTranslator(source='es', target=detected_language).translate(topic_string)
+            while True:
+                topic = input(f"\n{topic_string} (1/2/3):\n>> ")
+        
+                if topic in ["1", "2", "3"]:
+                    topic_selected = topic_model.get_topic_info().loc[similar_topics[0][int(topic)-1]+1]['Name']
+                    topic_selected = re.sub(r'\d+', '', topic_selected)  # Eliminar números
+                    topic_selected = topic_selected.replace('_', ' ')  # Eliminar guiones bajos
+                    break
+        else:
+            topic_selected = ""        
+ 
         prev_response = response['message']
