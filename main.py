@@ -158,7 +158,7 @@ def query_similar_paragraphs(complex_query, index, metadata, paragraphs, k=5, mo
     model = SentenceTransformer(model_name, device = 'cpu')
     queries = extract_relevant_terms(complex_query)
     complex_query = " ".join(queries)
-    print("Rephrased query:", complex_query)
+    # print("Rephrased query:", complex_query)
     
     query_embedding = model.encode([complex_query], convert_to_numpy=True)
     distances, indices = index.search(query_embedding, k)
